@@ -13,7 +13,12 @@ Post-History: DD-Mmm-2016
 Abstract
 ========
 
-XXX
+This PEP proposes a protocol for classes which represent a file system
+path to follow in order to provide such a path in a lower-level
+representation/encoding. Changes to Python's standard library are also
+proposed to utilize this protocol where appropriate to facilitate the
+use of path-like objects where historically only ``str`` and/or
+``bytes`` file system paths are accepted.
 
 
 Rationale
