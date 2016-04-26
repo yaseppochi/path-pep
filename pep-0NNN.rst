@@ -18,7 +18,9 @@ path to follow in order to provide such a path in a lower-level
 representation/encoding. Changes to Python's standard library are also
 proposed to utilize this protocol where appropriate to facilitate the
 use of path objects where historically only ``str`` and/or
-``bytes`` file system paths are accepted.
+``bytes`` file system paths are accepted. The goal is to allow users
+to use the representation of a file system path that's easiest for
+them as they migrate towards using path objects.
 
 
 Rationale
@@ -107,6 +109,14 @@ a ``str`` should be returned as the preferred path representation.
 
 Standard library changes
 ------------------------
+
+It is expected that most APIs in Python's standard library that
+currently accept a file system path will be updated appropriately to
+accept path objects (whether that requires code or simply an update
+to documentation will vary). The modules mentioned below, though,
+deserve specific details as they have either fundamental changes that
+empower the ability to use path objects, or entail additions/removal
+of APIs.
 
 
 builtins
@@ -250,8 +260,38 @@ provided object as-is.
 Open Issues
 ===========
 
-XXX name of ABC in pathlib?
-XXX update all functions in os.path?
+The name of the protocol's ABC
+------------------------------
+
+The name of the ABC being proposed to represent the protocol has not
+been discussed very much. Another viable name is ``pathlib.PathABC``.
+The name can't be ``pathlib.Path`` as that already exists.
+
+
+Update os.path to accept path objects?
+--------------------------------------
+
+The various functions in ``os.path`` [#os-path]_ could be updated to
+accept path objects to make their usage more transparent and make
+transitioning to supporting path objects easier. The question becomes,
+though, whether such transparent support is desired. Currently the
+``os.path`` functions specifically support ``str`` and ``bytes``,
+although mixing the two types is not allowed. It would not be
+difficult to update the various functions to call ``__fspath__()`` on
+the appropriate arguments and to perform no type checking of the
+values to implicitly allow for supporting both ``str`` and ``bytes``
+values as appropriate.
+
+The question becomes whether users will prefer this opt-out approach
+to supporting path objects or a more opt-in scenario. If ``os.path``
+gained support for path objects, a signficant majority of
+path-accepting APIs will magically work with path objects without any
+documentation being updated as long as they are using a new-enough
+version of Python. But with an opt-in approach, users would
+need to explicitly call a function in the ``os`` module or use the
+backwards-compatibility approach to add support, but they would also
+then be able to make sure document their support and add
+backwards-compatibility as desired.
 
 
 Rejected Ideas
@@ -290,8 +330,8 @@ directly exposing an API that most people will never need to interact
 with directly.
 
 
-Have __fspath__() only return strings
--------------------------------------
+Have ``__fspath__()`` only return strings
+------------------------------------------
 
 Much of the discussion that led to this PEP revolved around whether
 ``__fspath__()`` should be polymorphic and return ``bytes`` as well as
@@ -328,16 +368,19 @@ References
    (https://docs.python.org/3/library/pathlib.html#module-pathlib)
 
 .. [#builtins-open] The ``builtins.open()`` function
-   (XXX)
+   (https://docs.python.org/3/library/functions.html#open)
 
 .. [#os-fsencode] The ``os.fsencode()`` function
-   (XXX)
+   (https://docs.python.org/3/library/os.html#os.fsencode)
 
 .. [#os-fsdecode] The ``os.fsdecode()`` function
-   (XXX)
+   (https://docs.python.org/3/library/os.html#os.fsdecode)
 
 .. [#os-direntry] The ``os.DirEntry`` class
-   (XXX)
+   (https://docs.python.org/3/library/os.html#os.DirEntry)
+
+.. [#os-path] The ``os.path`` module
+   (https://docs.python.org/3/library/os.path.html#module-os.path)
 
 
 Copyright
