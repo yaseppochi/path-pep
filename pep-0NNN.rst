@@ -191,9 +191,9 @@ will raise an exception.
 The ``path`` attribute which has yet to be included in a release of
 Python will be removed as this PEP makes its usefulness redundant.
 
-The ``open()`` method on path objects will be removed. As
+The ``open()`` method on ``Path`` objects [#path]_ will be removed. As
 ``builtins.open()`` [#builtins-open]_ will be updated to accept path
-object, the ``open()`` method becomes redundant.
+objects, the ``open()`` method becomes redundant.
 
 
 C API
@@ -206,7 +206,17 @@ The C API will gain an equivalent function to ``os.fspath()``::
 Backwards compatibility
 =======================
 
-XXX
+From the perspective of Python, the only breakage of compatibility
+will come from the removal of ``pathlib.Path.open()``. But since
+the pathlib module [#pathlib]_ has been provisional until this PEP,
+its removal does not break any backwards-compatibility guarantees.
+Users of the method can update their code to either call ``str(path)``
+on their ``Path`` objects, or they can choose to rely on the
+``__fspath__()`` protocol existing in newer releases of Python 3.4,
+3.5, and 3.6. In that instance they can use the idiom of
+``path.__fspath__() if hasattr(path, '__fspath__') else path`` to get
+the path representation from a path object if provided, else use the
+provided object as-is.
 
 
 Open Issues
@@ -219,11 +229,65 @@ XXX update all functions in os.path?
 Rejected Ideas
 ==============
 
-XXX other method names
-XXX splitting str/bytes into separate methods
-XXX str-only method
-XXX more generic str representation
-XXX ``path`` attribute.
+Other names for the protocol's function
+---------------------------------------
+
+Various names were proposed during discussions leading to this PEP,
+including ``__path__``, ``__pathname__``, and ``__fspathname__``. In
+the end people seemed to gravitate ``__fspath__`` for it being
+unambiguous without unnecessarily long.
+
+
+Separate str/bytes methods
+--------------------------
+
+At one point it was suggested that ``__fspath__()`` only return
+strings and another method named ``__fspathb__()`` be introduced to
+return bytes. The thinking that by making ``__fspath__()`` not be
+polymorphic it could make dealing with the potential string or bytes
+representations easier. But the general consensus was that returning
+bytes will more than likely be rare and that the various functions in
+the os module are the better abstraction to be promoting over direct
+calls to ``__fspath__()``.
+
+
+Providing a path attribute
+--------------------------
+
+To help deal with the issue of ``pathlib.PurePath`` no inheriting from
+``str``, originally it was proposed to introduce a ``path`` attribute
+to mirror what ``os.DirEntry`` provides. In the end, though, it was
+determined that a protocol would provide the same result while not
+directly exposing an API that most people will never need to interact
+with directly.
+
+
+Have __fspath__() only return strings
+-------------------------------------
+
+Much of the discussion that led to this PEP revolved around whether
+``__fspath__()`` should be polymorphic and return ``bytes`` as well as
+``str`` instead of only ``str``. The general sentiment for this view
+was that because ``bytes`` are difficult to work with due to their
+inherit lack of information of their encoding, it would be better to
+forcibly promote the use of ``str`` as the low-level path
+representation.
+
+In the end it was decided that using ``bytes`` to represent paths is
+simply not going to go away and thus they should be supported to some
+degree. For those not wanting the hassle of working with ``bytes``,
+``os.fspath()`` is provided.
+
+
+A generic string encoding mechanism
+-----------------------------------
+
+At one point there was discussion of developing a generic mechanism to
+extract a string representation of an object that had semantic meaning
+(``__str__()`` does not necessarily return anything of semantic
+significance beyond what may be helpful for debugging). In the end it
+was deemed to lack a motivating need beyond the one this PEP is
+trying to solve in a specific fashion.
 
 
 References
