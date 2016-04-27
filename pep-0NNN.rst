@@ -161,7 +161,7 @@ been the original argument to the coercion function in question.
 
 The addition of ``os.fspath()``, the updates to
 ``os.fsencode()``/``os.fsdecode()``, and the current semantics of
-``pathlib.PurePath`` [#purepath]_ provide the semantics necessary to
+``pathlib.PurePath`` provide the semantics necessary to
 get the path representation one prefers. For a path object,
 ``pathlib.PurePath``/``Path`` can be used. If ``str`` is desired and
 no guesses about ``bytes`` encodings is desired to decode to a
