@@ -14,13 +14,13 @@ Abstract
 ========
 
 This PEP proposes a protocol for classes which represent a file system
-path to follow in order to provide such a path in a lower-level
+path to be able to provide a path in a lower-level
 representation/encoding. Changes to Python's standard library are also
 proposed to utilize this protocol where appropriate to facilitate the
 use of path objects where historically only ``str`` and/or
 ``bytes`` file system paths are accepted. The goal is to allow users
 to use the representation of a file system path that's easiest for
-them as they migrate towards using path objects.
+them now as they migrate towards using path objects in the future.
 
 
 Rationale
@@ -44,7 +44,7 @@ an improvement over strings and bytes for file system paths, it has
 suffered from a lack of adoption. Typically the two key issues listed
 for the low adoption rate has been the lack of support in the standard
 library and the difficulty of safely extracting the string
-representation of the path from a ``pathlib.PurePath`` [#purepath]_
+representation of the path from a ``pathlib.PurePath``
 object in a safe manner for use in APIs that don't support pathlib
 objects natively (as the pathlib module does not support ``bytes``
 paths, support for that type has never been a concern).
@@ -56,7 +56,7 @@ the standard library to support pathlib object widely.
 
 The lack of safety in converting pathlib objects to strings comes from
 the fact that only way to get a string representation of the path was
-to pass the object to ``str()`` [#builtins-str]_. This can pose a
+to pass the object to ``str()``. This can pose a
 problem when done blindly as nearly all Python objects have some
 string representation whether they are a path or not, e.g.
 ``str(None)`` will give a result that
@@ -68,6 +68,12 @@ follow which represent file system paths. Providing a protocol allows
 for clear signalling of what objects represent file system paths as
 well as a way to extract a lower-level encoding that can be used with
 older APIs which only support strings or bytes.
+
+Discussions regarding path objects that led to this PEP can be found
+in multiple threads on the python-ideas mailing list archive
+[#python-ideas-archive]_ for the months of March and April 2016 and on
+the python-dev mailing list archives [#python-dev-archive]_ during
+April 2016.
 
 
 Proposal
@@ -146,7 +152,7 @@ The ``fspath()`` function will be added with the following semantics::
         return path
 
 The ``os.fsencode()`` [#os-fsencode]_ and
-``os.fsdecode()`` [#os-fsdecode]_functions will be updated to accept
+``os.fsdecode()`` [#os-fsdecode]_ functions will be updated to accept
 path objects. As both functions coerce their arguments to
 ``bytes`` and ``str``, respectively, they will be updated to call
 ``__fspath__()`` as necessary and then peform their appropriate
@@ -192,16 +198,16 @@ pathlib
 '''''''
 
 The ``PathLike`` ABC as discussed in the Protocol_ section will be
-added. The constructor for ``pathlib.PurePath`` [#purepath]_ and
-``pathlib.Path`` [#path]_ will be updated to accept path objects.
-Both ``PurePath`` and ``Path`` will continue to not accept ``bytes``
-path representations, and so if ``__fspath__()`` returns ``bytes`` it
-will raise an exception.
+added to the pathlib module [#pathlib]_. The constructor for
+``pathlib.PurePath`` and ``pathlib.Path`` will be updated to accept
+path objects. Both ``PurePath`` and ``Path`` will continue to not
+accept ``bytes`` path representations, and so if ``__fspath__()``
+returns ``bytes`` it will raise an exception.
 
 The ``path`` attribute which has yet to be included in a release of
 Python will be removed as this PEP makes its usefulness redundant.
 
-The ``open()`` method on ``Path`` objects [#path]_ will be removed. As
+The ``open()`` method on ``Path`` objects will be removed. As
 ``builtins.open()`` [#builtins-open]_ will be updated to accept path
 objects, the ``open()`` method becomes redundant.
 
@@ -360,6 +366,12 @@ trying to solve in a specific fashion.
 
 References
 ==========
+
+.. [#python-ideas-archive] The python-ideas mailing list archive
+   (https://mail.python.org/pipermail/python-ideas/)
+
+.. [#python-dev-archive] The python-dev mailing list archive
+   (https://mail.python.org/pipermail/python-dev/)
 
 .. [#libc-open] ``open()`` documention for the C standard library
    (http://www.gnu.org/software/libc/manual/html_node/Opening-and-Closing-Files.html)
