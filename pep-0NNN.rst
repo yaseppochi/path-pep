@@ -326,7 +326,7 @@ Other names for the protocol's function
 
 Various names were proposed during discussions leading to this PEP,
 including ``__path__``, ``__pathname__``, and ``__fspathname__``. In
-the end people seemed to gravitate ``__fspath__`` for it being
+the end people seemed to gravitate towards ``__fspath__`` for being
 unambiguous without unnecessarily long.
 
 
