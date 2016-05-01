@@ -267,12 +267,26 @@ provided object as-is.
 Open Issues
 ===========
 
-The name of the protocol's ABC
-------------------------------
+The name and location of the protocol's ABC
+-------------------------------------------
 
 The name of the ABC being proposed to represent the protocol has not
 been discussed very much. Another viable name is ``pathlib.PathABC``.
 The name can't be ``pathlib.Path`` as that already exists.
+
+It's also an open issue as to whether the ABC belongs in the pathlib,
+os, or os.path module.
+
+
+Type hint for path-like objects
+-------------------------------
+
+Creating a proper type hint for  APIs that accept path objects as well
+as strings and bytes will probably be needed. It could be as simple
+as defining ``typing.Path`` and then having
+``typing.PathLike = typing.Union[typing.Path, str, bytes]``, but it
+should be properly discussed with the right type hinting experts if
+this is the best approach.
 
 
 Update os.path to accept path objects?
