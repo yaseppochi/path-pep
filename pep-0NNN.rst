@@ -194,6 +194,35 @@ method. It will return the value currently found on the ``path``
 attribute of ``DirEntry`` instances.
 
 
+os.path
+'''''''
+
+The various path-manipulation functions of ``os.path`` [#os-path]_
+will be updated to accept path objects. For polymorphic functions that
+accept both bytes and strings, they will be updated to simply use
+code very much similar to
+``path.__fspath__() if  hasattr(path, '__fspath__') else path``. This
+will allow for their pre-existing type-checking code to continue to
+function.
+
+During the discussions leading up to this PEP it was suggested that
+``os.path`` not be updated using an "explicit is better than implicit"
+argument. The thinking was that since ``__fspath__()`` is polymorphic
+itself it may be better to have code explicitly request that working
+with ``os.path`` extract the path representation from path objects
+explicitly. There is also the consideration that adding support this
+deep into the low-level OS APIs will lead to code magically supporting
+path objects without requiring any documentation updated, leading to
+potential complaints when it doesn't work, unbeknownst to the project
+author.
+
+But it is the view of the authors that "practicality beats purity" in
+this instance. To help facilitate the transition to supporting path
+objects, it is better to make the transition as easy as possible than
+to worry about unexpected/undocumented duck typing support for
+projects.
+
+
 pathlib
 '''''''
 
@@ -287,32 +316,6 @@ as defining ``typing.Path`` and then having
 ``typing.PathLike = typing.Union[typing.Path, str, bytes]``, but it
 should be properly discussed with the right type hinting experts if
 this is the best approach.
-
-
-Update os.path to accept path objects?
---------------------------------------
-
-The various functions in ``os.path`` [#os-path]_ could be updated to
-accept path objects to make their usage more transparent and make
-transitioning to supporting path objects easier. The question becomes,
-though, whether such transparent support is desired. Currently the
-``os.path`` functions specifically support ``str`` and ``bytes``,
-although mixing the two types is not allowed. It would not be
-difficult to update the various functions to call ``__fspath__()`` on
-the appropriate arguments and to perform no type checking of the
-values to implicitly allow for supporting both ``str`` and ``bytes``
-values as appropriate.
-
-The question becomes whether users will prefer this opt-out approach
-to supporting path objects or a more opt-in scenario. If ``os.path``
-gained support for path objects, a signficant majority of
-path-accepting APIs will magically work with path objects without any
-documentation being updated as long as they are using a new-enough
-version of Python. But with an opt-in approach, users would
-need to explicitly call a function in the ``os`` module or use the
-backwards-compatibility approach to add support, but they would also
-then be able to make sure document their support and add
-backwards-compatibility as desired.
 
 
 Rejected Ideas
