@@ -1,11 +1,11 @@
 /*
     Return the file system path of the object.
 
-    If a value other than a string is found, raise TypeError.
-    Returns a new reference.
+    If the object is str or bytes, then allow it to pass through with
+    an incremented refcount. All other types raise a TypeError.
 */
 PyObject *
-PyOS_FSPath(PyObject *path)
+PyOS_RawFSPath(PyObject *path)
 {
     if (PyObject_HasAttrString(path, "__fspath__")) {
         path = PyObject_CallMethodObjArgs(path, "__fspath__", NULL);
@@ -17,13 +17,12 @@ PyOS_FSPath(PyObject *path)
         Py_INCREF(path);
     }
 
-    if (!PyUnicode_Check(path)) {
+    if (!PyUnicode_Check(path) && !PyBytes_Check(path)) {
         Py_DECREF(path);
         return PyErr_Format(PyExc_TypeError,
-                            "expected a string or path object, not %S",
+                            "expected a string, bytes, or path object, not %S",
                             path->ob_type);
     }
-    else {
-        return path;
-    }
+
+    return path;
 }
