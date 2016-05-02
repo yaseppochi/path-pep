@@ -249,7 +249,7 @@ code very much similar to
 will allow for their pre-existing type-checking code to continue to
 function.
 
-.. COMMENT "explicitly request that" was redundant, right?
+.. COMMENT TYPO "explicitly request that" was redundant, right?
 
 During the discussions leading up to this PEP it was suggested that
 ``os.path`` not be updated using an "explicit is better than implicit"
