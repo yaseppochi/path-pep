@@ -13,9 +13,15 @@ Post-History: DD-Mmm-2016
 Abstract
 ========
 
+.. COMMENT I really think we should avoid calling this ``str`` or
+   ``bytes`` representation an "encoding".  It may be a useful analogy
+   for some, but in Python "encoding" has a strong connotation of
+   encoding text to bytes, especially when used in a context where str
+   and bytes are both present.
+
 This PEP proposes a protocol for classes which represent a file system
-path to be able to provide a path in a lower-level
-representation/encoding. Changes to Python's standard library are also
+path to be able to provide a path in a stringish
+representation. Changes to Python's standard library are also
 proposed to utilize this protocol where appropriate to facilitate the
 use of path objects where historically only ``str`` and/or
 ``bytes`` file system paths are accepted. The goal is to allow users
@@ -26,6 +32,8 @@ them now as they migrate towards using path objects in the future.
 Rationale
 =========
 
+.. COMMENT "Encoding" avoidance.  Plus three explanatory sentences.
+
 Historically in Python, file system paths have been represented as
 strings or bytes. This choice of representation has stemmed from C's
 own decision to represent file system paths as
@@ -33,8 +41,10 @@ own decision to represent file system paths as
 format to use for file system paths, it's not necessarily optimal. At
 issue is the fact that while all file system paths can be represented
 as strings or bytes, not all strings or bytes represent a file system
-path; having a format and structure to file system paths makes their
-string/bytes representation act as an encoding.
+path. It is impossible to duck-type paths when represented as strings.
+And as the name suggests, paths are often operated on by segments, and
+segments themselves have structure such as extensions.  It makes sense
+to provide higher-level APIs to manipulate this structure.
 
 To help elevate the representation of file system paths from their
 encoding as strings and bytes to a more appropriate object
@@ -54,8 +64,11 @@ that the pathlib module was provisional. The acceptance of this PEP
 will lead to the removal of the module's provisional status, allowing
 the standard library to support pathlib object widely.
 
+.. COMMENT Add "generic" to "way", as it's already possible if you're
+   willing to LBYL.
+
 The lack of safety in converting pathlib objects to strings comes from
-the fact that only way to get a string representation of the path was
+the fact that only generic way to get a string representation of the path was
 to pass the object to ``str()``. This can pose a
 problem when done blindly as nearly all Python objects have some
 string representation whether they are a path or not, e.g.
@@ -79,11 +92,14 @@ April 2016.
 Proposal
 ========
 
+.. COMMENT I don't see a need to "allow" removal of provisional
+   status.  Just remove it.                           
+
 This proposal is split into two parts. One part is the proposal of a
 protocol for objects to declare and provide support for exposing a
 file system path representation. The other part is changes to Python's
-standard library to support the new protocol. These changes will also
-allow for the pathlib module to drop its provisional status.
+standard library to support the new protocol. The second part also removes
+the "provisional" status from the pathlib module.
 
 
 Protocol
@@ -106,11 +122,15 @@ to be considered a path object::
             raise NotImplementedError
 
 
+.. COMMENT Rationale added.
+
 Objects representing file system paths will implement the
-``__fspath__()`` method which will return the ``str`` or ``bytes``
-representation of the path. If the file system path is already
-properly encoded as ``bytes`` then that should be returned, otherwise
-a ``str`` should be returned as the preferred path representation.
+``__fspath__()`` method which will return a ``str`` or ``bytes``
+representation of the path. ``str`` is the preferred low-level path
+representation, because users expect paths to be human-readable
+text. ``bytes`` will typically be used when the path object represents
+path segments internally as ``bytes,`` such as the (polymorphic)
+DirEntry object returned by os.scandir.
 
 
 Standard library changes
@@ -151,30 +171,54 @@ The ``fspath()`` function will be added with the following semantics::
             raise TypeError("expected a str or path object, not " + type_name)
         return path
 
+.. COMMENT TYPO: peform -> perform
+   "As necessary" seems ambiguous to me; the actual semantics will be
+   "if present", right?
+
 The ``os.fsencode()`` [#os-fsencode]_ and
 ``os.fsdecode()`` [#os-fsdecode]_ functions will be updated to accept
 path objects. As both functions coerce their arguments to
 ``bytes`` and ``str``, respectively, they will be updated to call
-``__fspath__()`` as necessary and then peform their appropriate
+``__fspath__()`` if present to convert the path object to ``str`` or
+``bytes`` representation, and then perform their appropriate
 coercion operations as if the return value from ``__fspath__()`` had
 been the original argument to the coercion function in question.
+
+.. COMMENT It's not a matter of "guessing" (we know what encoding will
+   be used), it's a matter of the client considering bytes to be an error.
 
 The addition of ``os.fspath()``, the updates to
 ``os.fsencode()``/``os.fsdecode()``, and the current semantics of
 ``pathlib.PurePath`` provide the semantics necessary to
 get the path representation one prefers. For a path object,
 ``pathlib.PurePath``/``Path`` can be used. If ``str`` is desired and
-no guesses about ``bytes`` encodings is desired to decode to a
-``str``, then ``os.fspath()`` can be used. If a ``str`` is desired and
+a ``bytes`` return is considered to be an error,
+then ``os.fspath()`` can be used. If a ``str`` is desired and
 the encoding of ``bytes`` should be assumed to be the default file
 system encoding, then ``os.fsdecode()`` should be used. Finally, if a
 ``bytes`` representation is desired and any strings should be encoded
 using the default file system encoding then ``os.fsencode()`` is used.
-No function is provided for the case of wanting a ``bytes``
+
+.. COMMENT I would phrase the following recommendation as
+   This PEP recommends using path objects, or ``str`` if the path is
+   treated as "opaque", and simply passed to OS APIs without
+   manipulation.  Paths represented as ``bytes`` are discouraged, and
+   are necessary only in cases where it is desired to decode paths
+   which are not in the file system encoding to ``str``.
+
+   Nick and Ethan wanted _raw_fspath().  IMO we need rationale for
+   omitting that, including the statement of how to work around in the
+   rare case where it's needed.
+
+This PEP recommends using path objects when possible and falling back
+to string paths as necessary.
+Therefore, no function is provided for the case of wanting a ``bytes``
 representation but without any automatic encoding to help discourage
-the use of multiple ``bytes`` encodings on a single file system. This
-PEP recommends using path objects when possible and falling back to
-string paths as necessary.
+the use of multiple ``bytes`` encodings on a single file system. If it
+is necessary to deal with an existing file system directory with entries in
+a non-default encoding, this can be done with low-level functions
+using ``str`` and the PEP 383 ``surrogateescape`` error handler, or by
+using ``bytes`` directly.
 
 Another way to view this is as a hierarchy of file system path
 representations (highest- to lowest-level): path -> str -> bytes. The
@@ -205,10 +249,12 @@ code very much similar to
 will allow for their pre-existing type-checking code to continue to
 function.
 
+.. COMMENT "explicitly request that" was redundant, right?
+
 During the discussions leading up to this PEP it was suggested that
 ``os.path`` not be updated using an "explicit is better than implicit"
 argument. The thinking was that since ``__fspath__()`` is polymorphic
-itself it may be better to have code explicitly request that working
+itself it may be better to have code working
 with ``os.path`` extract the path representation from path objects
 explicitly. There is also the consideration that adding support this
 deep into the low-level OS APIs will lead to code magically supporting
@@ -233,8 +279,10 @@ path objects. Both ``PurePath`` and ``Path`` will continue to not
 accept ``bytes`` path representations, and so if ``__fspath__()``
 returns ``bytes`` it will raise an exception.
 
-The ``path`` attribute which has yet to be included in a release of
-Python will be removed as this PEP makes its usefulness redundant.
+.. COMMENT Rephrase to parallel the following paragraph better.
+
+The ``path`` attribute present in some unreleased versions
+will be removed. The ``__fspath__`` protocol makes it redundant.
 
 The ``open()`` method on ``Path`` objects will be removed. As
 ``builtins.open()`` [#builtins-open]_ will be updated to accept path
@@ -346,7 +394,9 @@ calls to ``__fspath__()``.
 Providing a path attribute
 --------------------------
 
-To help deal with the issue of ``pathlib.PurePath`` no inheriting from
+.. COMMENT TYPO no -> not
+
+To help deal with the issue of ``pathlib.PurePath`` not inheriting from
 ``str``, originally it was proposed to introduce a ``path`` attribute
 to mirror what ``os.DirEntry`` provides. In the end, though, it was
 determined that a protocol would provide the same result while not
@@ -357,13 +407,25 @@ with directly.
 Have ``__fspath__()`` only return strings
 ------------------------------------------
 
+.. COMMENT TYPO inherit -> inherent, of -> about
+   Also mentioned PEP 383.
+
 Much of the discussion that led to this PEP revolved around whether
 ``__fspath__()`` should be polymorphic and return ``bytes`` as well as
 ``str`` instead of only ``str``. The general sentiment for this view
-was that because ``bytes`` are difficult to work with due to their
-inherit lack of information of their encoding, it would be better to
-forcibly promote the use of ``str`` as the low-level path
-representation.
+was that ``bytes`` are difficult to work with due to their
+inherent lack of information about their encoding, and PEP 383 makes
+it possible to represent all filesystem paths using ``str`` with the
+``surrogateescape`` handler.  Thus it would be better to 
+forcibly promote the use of ``str`` as the low-level interface to
+high-level path objects.
+
+.. COMMENT Nobody denied that bytes are here to stay.
+   Support is already available, albeit from 3rd parties.  The point
+   is that if a "bytes-producing" path object is passed into code that
+   expects str, it will raise there, rather than where such an object
+   is produced.  This was a deliberate attempt to throw the Exception
+   back into the bytes arena.
 
 In the end it was decided that using ``bytes`` to represent paths is
 simply not going to go away and thus they should be supported to some
@@ -373,6 +435,11 @@ degree. For those not wanting the hassle of working with ``bytes``,
 
 A generic string encoding mechanism
 -----------------------------------
+
+.. COMMENT Also, a generic mechanism would suffer from the ambiguity
+   it introduces into the duck-typing mechanism of the kind that makes
+   "str(maybe_path)" inappropriate here.  Restricted compared to
+   ``str()``, of course, but "generic" implies the ambiguity.
 
 At one point there was discussion of developing a generic mechanism to
 extract a string representation of an object that had semantic meaning
